@@ -260,8 +260,8 @@ const BillingPage = () => {
                                     className="bg-transparent border-none outline-none font-medium text-gray-700 text-right p-0 focus:ring-0 cursor-pointer"
                                 />
                             </div>
+                            {invoiceNumber && <p className="text-gray-500 font-medium mt-1">Invoice #: {invoiceNumber}</p>}
                         </div>
-                        {invoiceNumber && <p className="text-gray-500 font-medium">Invoice #: {invoiceNumber}</p>}
                     </div>
 
 
@@ -274,7 +274,7 @@ const BillingPage = () => {
                         <div className="text-right">
                             <p className="text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Payable To</p>
                             <h2 className="text-xl font-bold text-gray-800">GH Brother workshop</h2>
-                            <p className="text-gray-600">pillayar kovil steet, mambattu</p>
+                            <p className="text-gray-600">Pillayar Kovil Street, Mambattu</p>
                         </div>
                     </div>
                 </div>

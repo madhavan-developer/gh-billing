@@ -309,7 +309,7 @@ const BillingHistoryPage = () => {
                                     <div className="text-right">
                                         <p className="text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Payable To</p>
                                         <h2 className="text-xl font-bold text-gray-800">GH Brother workshop</h2>
-                                        <p className="text-gray-600">pillayar kovil steet, mambattu</p>
+                                        <p className="text-gray-600">Pillayar Kovil Street, Mambattu</p>
                                     </div>
                                 </div>
 
