@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Plus, Trash2, Printer, Check, ShoppingCart, User, Smartphone, Calendar, FileText } from 'lucide-react';
 import api from '../lib/api';
 
 const BillingPage = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [stocks, setStocks] = useState([]);
     const [filteredStocks, setFilteredStocks] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -10,6 +13,7 @@ const BillingPage = () => {
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+    const [editingId, setEditingId] = useState(null);
 
 
     const [billSaved, setBillSaved] = useState(false);
@@ -25,7 +29,20 @@ const BillingPage = () => {
 
     useEffect(() => {
         fetchStocks();
-    }, []);
+        if (location.state?.billToEdit) {
+            const bill = location.state.billToEdit;
+            setCustomerName(bill.customerName);
+            setCustomerPhone(bill.customerPhone);
+            setCart(bill.items);
+            setEditingId(bill._id);
+            setInvoiceNumber(bill.invoiceNumber); // Show existing invoice number
+            if (bill.date) {
+                setInvoiceDate(new Date(bill.date).toISOString().split('T')[0]);
+            }
+            // Clear location state so refresh doesn't keep us in edit mode forever
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate]);
 
     useEffect(() => {
         const filtered = stocks.filter(stock =>
@@ -118,15 +135,25 @@ const BillingPage = () => {
                 customerName,
                 customerPhone,
                 items: cart,
-                totalAmount: calculateTotal()
+                totalAmount: calculateTotal(),
+                date: invoiceDate
             };
 
-            const res = await api.post('/bills', billData);
+            let res;
+            if (editingId) {
+                res = await api.put(`/bills/${editingId}`, billData);
+                showNotification('Bill updated successfully!', 'success');
+            } else {
+                res = await api.post('/bills', billData);
+                showNotification('Bill saved successfully!', 'success');
+            }
+
             if (res.data && res.data.invoiceNumber) {
                 setInvoiceNumber(res.data.invoiceNumber);
+            } else if (editingId) {
+                // Keep existing number if update didn't return one (it should though)
             }
             setBillSaved(true);
-            showNotification('Bill saved successfully!', 'success');
 
             setTimeout(() => {
                 window.print();
@@ -143,6 +170,8 @@ const BillingPage = () => {
         setCustomerPhone('');
         setBillSaved(false);
         setInvoiceNumber('');
+        setInvoiceNumber('');
+        setEditingId(null);
         fetchStocks();
     };
 
@@ -156,9 +185,9 @@ const BillingPage = () => {
                             <div className="bg-blue-50 p-4 rounded-full mb-4">
                                 <Printer size={32} className="text-blue-600" />
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Confirm Print?</h3>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">{editingId ? 'Confirm Update?' : 'Confirm Print?'}</h3>
                             <p className="text-gray-500 mb-8">
-                                This will save the bill and open the print dialog. Are you sure you want to proceed?
+                                {editingId ? 'This will update the existing bill and stock.' : 'This will save the bill and open the print dialog.'} Are you sure you want to proceed?
                             </p>
                             <div className="flex space-x-3 w-full">
                                 <button
@@ -253,12 +282,7 @@ const BillingPage = () => {
                             <h1 className="text-4xl font-bold text-gray-900 mb-2">INVOICE</h1>
                             <div className="flex items-center justify-end space-x-2 text-gray-500">
                                 <span>Date:</span>
-                                <input
-                                    type="date"
-                                    value={invoiceDate}
-                                    onChange={(e) => setInvoiceDate(e.target.value)}
-                                    className="bg-transparent border-none outline-none font-medium text-gray-700 text-right p-0 focus:ring-0 cursor-pointer"
-                                />
+                                <span className="font-medium text-gray-700 text-right">{new Date(invoiceDate).toLocaleDateString('en-GB')}</span>
                             </div>
                             {invoiceNumber && <p className="text-gray-500 font-medium mt-1">Invoice #: {invoiceNumber}</p>}
                         </div>
@@ -401,7 +425,7 @@ const BillingPage = () => {
                                 className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold hover:shadow-lg hover:shadow-blue-500/40 transition-all flex justify-center items-center space-x-2"
                             >
                                 <Printer size={20} />
-                                <span>Print Invoice</span>
+                                <span>{editingId ? 'Update & Print' : 'Print Invoice'}</span>
                             </button>
                         )}
                     </div>

@@ -1,24 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Search, FileText, Calendar, User, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Download, Search, FileText, Calendar, User, ChevronLeft, ChevronRight, Printer, Trash2, Edit, MoreVertical, X, AlertCircle } from 'lucide-react';
 import api from '../lib/api';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import '../datepicker-custom.css';
 
 const BillingHistoryPage = () => {
+    const navigate = useNavigate();
     const [bills, setBills] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openMenuId && !event.target.closest('.action-menu-container')) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openMenuId]);
 
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [selectedBill, setSelectedBill] = useState(null);
+
+    // Confirmation Modal State
+    const [confirmModal, setConfirmModal] = useState({
+        show: false,
+        type: null, // 'delete' or 'edit'
+        bill: null
+    });
+
+    const openConfirmModal = (type, bill) => {
+        setConfirmModal({ show: true, type, bill });
+        setOpenMenuId(null); // Close the action menu
+    };
+
+    const closeConfirmModal = () => {
+        setConfirmModal({ show: false, type: null, bill: null });
+    };
+
+    const confirmAction = async () => {
+        const { type, bill } = confirmModal;
+        if (!bill) return;
+
+        if (type === 'delete') {
+            try {
+                await api.delete(`/bills/${bill._id}`);
+                fetchBills();
+                closeConfirmModal();
+            } catch (error) {
+                console.error('Error deleting bill:', error);
+                alert('Failed to delete bill');
+            }
+        } else if (type === 'edit') {
+            navigate('/', { state: { billToEdit: bill } });
+            closeConfirmModal();
+        }
+    };
 
     const handlePrint = (bill) => {
         setSelectedBill(bill);
         setTimeout(() => {
             window.print();
         }, 300);
+    };
+
+    const handleDelete = (bill) => {
+        openConfirmModal('delete', bill);
+    };
+
+    const handleEdit = (bill) => {
+        openConfirmModal('edit', bill);
     };
 
     useEffect(() => {
@@ -64,15 +121,17 @@ const BillingHistoryPage = () => {
         const matchesSearch = bill.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             bill.customerPhone.includes(searchTerm);
 
+        const billDate = new Date(bill.date || bill.createdAt);
+
         let matchesDate = true;
         if (startDate) {
-            matchesDate = matchesDate && new Date(bill.createdAt) >= new Date(startDate);
+            matchesDate = matchesDate && billDate >= new Date(startDate);
         }
         if (endDate) {
             // Set end date to end of day to include the selected day
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-            matchesDate = matchesDate && new Date(bill.createdAt) <= end;
+            matchesDate = matchesDate && billDate <= end;
         }
 
         return matchesSearch && matchesDate;
@@ -83,7 +142,7 @@ const BillingHistoryPage = () => {
         const csvRows = [headers.join(',')];
 
         filteredBills.forEach(bill => {
-            const date = new Date(bill.createdAt).toLocaleDateString();
+            const date = new Date(bill.date || bill.createdAt).toLocaleDateString('en-GB');
             const items = bill.items.map(item => `${item.size} ${item.variant} (${item.quantity})`).join('; ');
             const row = [
                 date,
@@ -124,6 +183,19 @@ const BillingHistoryPage = () => {
                 </button>
             </div>
 
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                    <div className="p-4 bg-blue-50 text-blue-600 rounded-xl">
+                        <FileText size={24} />
+                    </div>
+                    <div>
+                        <p className="text-sm text-gray-500 font-medium">Total Bills Generated</p>
+                        <h3 className="text-3xl font-extrabold text-gray-800">{bills.length}</h3>
+                    </div>
+                </div>
+            </div>
+
             {/* Filters */}
             <div className="flex gap-4 mb-8">
                 {/* Search Bar */}
@@ -154,7 +226,7 @@ const BillingHistoryPage = () => {
                                 placeholderText="Start Date"
                                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-32 cursor-pointer font-medium"
                                 renderCustomHeader={CustomHeader}
-                                dateFormat="dd MMM yyyy"
+                                dateFormat="dd/MM/yyyy"
                                 calendarClassName="custom-calendar"
                                 todayButton="Today"
                             />
@@ -174,7 +246,7 @@ const BillingHistoryPage = () => {
                                 placeholderText="End Date"
                                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-32 cursor-pointer font-medium"
                                 renderCustomHeader={CustomHeader}
-                                dateFormat="dd MMM yyyy"
+                                dateFormat="dd/MM/yyyy"
                                 calendarClassName="custom-calendar"
                                 todayButton="Today"
                             />
@@ -211,7 +283,7 @@ const BillingHistoryPage = () => {
                                 <td className="p-6 text-gray-600">
                                     <div className="flex items-center space-x-2">
                                         <Calendar size={16} className="text-gray-400" />
-                                        <span>{new Date(bill.createdAt).toLocaleDateString()}</span>
+                                        <span>{new Date(bill.date || bill.createdAt).toLocaleDateString('en-GB')}</span>
                                     </div>
                                 </td>
                                 <td className="p-6 text-gray-600 font-medium">
@@ -246,14 +318,56 @@ const BillingHistoryPage = () => {
                                 <td className="p-6 text-right">
                                     <span className="font-bold text-lg text-gray-800">₹{bill.totalAmount}</span>
                                 </td>
-                                <td className="p-6 text-center">
+                                <td className="p-6 text-center relative action-menu-container">
                                     <button
-                                        onClick={() => handlePrint(bill)}
-                                        className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-blue-100 hover:text-blue-600 transition-colors"
-                                        title="Print Invoice"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenMenuId(openMenuId === bill._id ? null : bill._id);
+                                        }}
+                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                                     >
-                                        <Printer size={20} />
+                                        <MoreVertical size={20} />
                                     </button>
+
+                                    {openMenuId === bill._id && (
+                                        <div className="absolute right-8 top-12 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-fade-in-up">
+                                            <div className="flex flex-col py-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handlePrint(bill);
+                                                        setOpenMenuId(null);
+                                                    }}
+                                                    className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 text-gray-600 transition-colors w-full text-left"
+                                                >
+                                                    <Printer size={16} className="text-blue-500" />
+                                                    <span className="font-medium text-sm">Print Invoice</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEdit(bill);
+                                                        setOpenMenuId(null);
+                                                    }}
+                                                    className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 text-gray-600 transition-colors w-full text-left"
+                                                >
+                                                    <Edit size={16} className="text-yellow-500" />
+                                                    <span className="font-medium text-sm">Edit Bill</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(bill);
+                                                        setOpenMenuId(null);
+                                                    }}
+                                                    className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors w-full text-left"
+                                                >
+                                                    <Trash2 size={16} />
+                                                    <span className="font-medium text-sm">Delete Bill</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -290,7 +404,7 @@ const BillingHistoryPage = () => {
                                         <h1 className="text-4xl font-bold text-gray-900 mb-2">INVOICE</h1>
                                         <div className="flex items-center justify-end space-x-2 text-gray-500">
                                             <span className="font-semibold">Date:</span>
-                                            <span className="font-medium text-gray-800">{new Date(selectedBill.createdAt).toLocaleDateString()}</span>
+                                            <span className="font-medium text-gray-800">{new Date(selectedBill.date || selectedBill.createdAt).toLocaleDateString('en-GB')}</span>
                                         </div>
                                         <div className="flex items-center justify-end space-x-2 text-gray-500 mt-1">
                                             <span className="font-semibold">Invoice #:</span>
@@ -353,6 +467,46 @@ const BillingHistoryPage = () => {
                                     </div>
                                     <p className="text-sm text-gray-500 font-medium">Thank you for choosing GH Brother Workshop!</p>
                                     <p className="mt-1 text-xs text-gray-400">Phone No: 9655108169</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                confirmModal.show && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in print:hidden">
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-scale-in">
+                            <div className="p-8 text-center">
+                                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-6 ${confirmModal.type === 'delete' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                    }`}>
+                                    {confirmModal.type === 'delete' ? <Trash2 size={32} /> : <Edit size={32} />}
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                    {confirmModal.type === 'delete' ? 'Delete Bill?' : 'Edit Bill?'}
+                                </h3>
+                                <p className="text-gray-500 mb-8">
+                                    {confirmModal.type === 'delete'
+                                        ? 'Are you sure you want to delete this bill? All items will be returned to stock. This action cannot be undone.'
+                                        : 'Editing this bill will revert current quantities to stock and deduct new quantities once saved. Do you want to proceed?'
+                                    }
+                                </p>
+                                <div className="flex space-x-4">
+                                    <button
+                                        onClick={closeConfirmModal}
+                                        className="flex-1 py-3.5 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmAction}
+                                        className={`flex-1 py-3.5 rounded-xl font-bold text-white transition-all shadow-lg ${confirmModal.type === 'delete'
+                                            ? 'bg-red-600 hover:bg-red-700 shadow-red-500/30'
+                                            : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'
+                                            }`}
+                                    >
+                                        {confirmModal.type === 'delete' ? 'Yes, Delete' : 'Yes, Edit'}
+                                    </button>
                                 </div>
                             </div>
                         </div>

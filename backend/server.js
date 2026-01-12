@@ -15,6 +15,7 @@ app.use(express.json());
 app.use('/api/stocks', require('./routes/stockRoutes'));
 app.use('/api/bills', require('./routes/billRoutes'));
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/purchases', require('./routes/purchaseRoutes'));
 
 app.get('/', (req, res) => {
     res.send('API is running...');
