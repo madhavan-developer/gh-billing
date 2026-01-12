@@ -13,7 +13,7 @@ const Sidebar = () => {
     ];
 
     return (
-        <div className="w-72 h-screen bg-gray-900 text-white flex flex-col fixed left-0 top-0 shadow-2xl z-50">
+        <div className="w-72 h-screen bg-gray-900 text-white flex flex-col fixed left-0 top-0 shadow-2xl z-50 print:hidden">
             <div className="p-8 flex items-center space-x-3 border-b border-gray-800">
                 <img src="/GH-logo.png" alt="Logo" className="h-10 w-10 object-contain bg-white rounded-lg p-1" />
                 <div>

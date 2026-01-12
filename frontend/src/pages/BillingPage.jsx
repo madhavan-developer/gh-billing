@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Plus, Trash2, Printer, Check, ShoppingCart, User, Smartphone, Calendar, FileText } from 'lucide-react';
 import api from '../lib/api';
+import InvoiceTemplate from '../components/InvoiceTemplate';
 
 const BillingPage = () => {
     const location = useLocation();
@@ -266,42 +267,7 @@ const BillingPage = () => {
             </div>
 
             {/* Right Panel: Cart & Billing */}
-            <div className="w-1/2 flex flex-col bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden print:w-full print:shadow-none print:border-none print:fixed print:inset-0 print:z-50 print:bg-white print:h-screen">
-
-                {/* Print Header - Designed for Paper */}
-                <div className="hidden print:block p-8 border-b-2 border-gray-100">
-                    <div className="flex justify-between items-start mb-8">
-                        <div className="flex items-center space-x-4">
-                            <img src="/GH-logo.png" alt="Logo" className="h-24 object-contain max-w-[200px]" />
-                            <div>
-                                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">GH Brother Workshop</h1>
-                                <p className="text-sm text-gray-500 font-medium">Professional Photo Framing</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2">INVOICE</h1>
-                            <div className="flex items-center justify-end space-x-2 text-gray-500">
-                                <span>Date:</span>
-                                <span className="font-medium text-gray-700 text-right">{new Date(invoiceDate).toLocaleDateString('en-GB')}</span>
-                            </div>
-                            {invoiceNumber && <p className="text-gray-500 font-medium mt-1">Invoice #: {invoiceNumber}</p>}
-                        </div>
-                    </div>
-
-
-                    <div className="flex justify-between mt-8">
-                        <div>
-                            <p className="text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Billed To</p>
-                            <h2 className="text-xl font-bold text-gray-800">{customerName}</h2>
-                            <p className="text-gray-600">{customerPhone}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-gray-400 uppercase font-semibold tracking-wider mb-1">Payable To</p>
-                            <h2 className="text-xl font-bold text-gray-800">GH Brother workshop</h2>
-                            <p className="text-gray-600">Pillayar Kovil Street, Mambattu</p>
-                        </div>
-                    </div>
-                </div>
+            <div className="w-1/2 flex flex-col bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden print:overflow-visible print:w-full print:shadow-none print:border-none print:absolute print:top-0 print:left-0 print:z-50 print:bg-white print:min-h-screen print:h-auto">
 
                 {/* Cart Interface Header */}
                 <div className="p-6 bg-gray-50 border-b border-gray-100 print:hidden">
@@ -429,17 +395,17 @@ const BillingPage = () => {
                             </button>
                         )}
                     </div>
-
-                    {/* Print Footer */}
-                    <div className="hidden print:block text-center pt-8 border-t border-gray-100 mt-8">
-                        <div className="flex flex-col items-center justify-center mb-6">
-                            <p className="text-sm text-gray-800 font-semibold mb-2">Scan & Pay</p>
-                            <img src="/qr.jpeg" alt="Payment QR Code" className="w-32 h-32 object-contain border border-gray-200 rounded-lg" />
-                        </div>
-                        <p className="text-sm text-gray-500 font-medium">Thank you for choosing GH Brother Workshop!</p>
-                        <p className="mt-1 text-xs text-gray-400">Phone No: 9655108169</p>
-                    </div>
                 </div>
+
+                {/* Invoice Print Template */}
+                <InvoiceTemplate
+                    customerName={customerName}
+                    customerPhone={customerPhone}
+                    invoiceNumber={invoiceNumber}
+                    date={invoiceDate}
+                    items={cart}
+                    totalAmount={calculateTotal()}
+                />
             </div>
 
         </div>
